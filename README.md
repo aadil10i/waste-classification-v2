@@ -4,6 +4,5 @@
 
 ## Models include
 
-- Pre-trained MobileNetV2 using transfer learning
-  &
-- Model creatied from scratch using two dropount and dense layers
+- Pre-trained MobileNetV2 model using transfer learning
+- Model created from scratch using two dropout and dense layers
