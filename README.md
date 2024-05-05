@@ -2,7 +2,7 @@
 
 - Combining Neural network models trained on 4 different categories of waste. Aluminium, Paper, Plastic, Organic. With the Raspberry Pi 3b+, which actuates multiple motors based on it's classification.
 
-  ![schematic](IMG_0859.JPEG)
+  ![schematic](pischematic.png)
 
 ## Models include
 
