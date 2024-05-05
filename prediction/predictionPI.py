@@ -1,8 +1,8 @@
 from turtle import delay
+import time
 from gpiozero import Motor, Servo
 import cv2
 import numpy as np
-from tensorflow.keras.models import load_model  # TensorFlow backend
 
 # Import TensorFlow Lite interpreter
 import tflite_runtime.interpreter as tflite
@@ -21,48 +21,30 @@ duty_cycle_paper = 20  # Adjust these values as needed
 duty_cycle_plastic = 50
 duty_cycle_organic = 70
 
-# Load the pre-trained machine learning model
-# model = load_model('path/to/your/model.h5')
-
-# Load the TensorFlow Lite model
-interpreter = tflite.Interpreter(model_path='path/to/your/model.tflite')
+# Load the TFLite model
+interpreter = tflite.Interpreter(model_path="./MobileNetV2_TransferLearning.tflite")
 interpreter.allocate_tensors()
+
+# Get input and output tensors
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 # Define waste categories based on prediction output
 categories = {0: "Organic", 1: "Paper", 2: "Plastic", 3: "Aluminium"}
 
 # Function to pre-process the image for prediction
 def pre_process_image(frame):
-  resized_image = cv2.resize(frame, (30, 60))  # Resize to model input size
+  resized_image = cv2.resize(frame, (192, 192))  # Resize to model input size
   return resized_image.astype('float32') / 255.0  # Normalize pixel values
 
-# Function to identify waste type using the model 
-# def predict_waste(frame):
-#   preprocessed_image = pre_process_image(frame)
-#   image_batch = np.expand_dims(preprocessed_image, axis=0)  # Add batch dimension
-#   prediction = model.predict(image_batch)
-#   predicted_class = np.argmax(prediction)
-#   return categories[predicted_class]
-
-# Function to identify waste type using the TensorFlow Lite model
+# Function to identify waste type using the TFLite model
 def predict_waste(frame):
   preprocessed_image = pre_process_image(frame)
-  image_batch = np.expand_dims(preprocessed_image, axis=0)  # Add batch dimension
-
-  # Get input and output tensors
-  input_details = interpreter.get_input_details()
-  output_details = interpreter.get_output_details()
-
-  # Set input tensor
-  interpreter.set_tensor(input_details[0]['index'], image_batch)
-
-  # Run inference
+  input_data = np.expand_dims(preprocessed_image, axis=0).astype(np.float32)  # Add batch dimension
+  interpreter.set_tensor(input_details[0]['index'], input_data)
   interpreter.invoke()
-
-  # Get output tensor
-  prediction = interpreter.get_tensor(output_details[0]['index'])
-
-  predicted_class = np.argmax(prediction)
+  output_data = interpreter.get_tensor(output_details[0]['index'])
+  predicted_class = np.argmax(output_data)
   return categories[predicted_class]
 
 # Open the PiCamera 
@@ -78,21 +60,22 @@ while True:
 
   # Move motor to respective compartment based on prediction
   if waste_type == "Organic":
-    motor.move(duty_cycle_organic)
+    motor.forward(duty_cycle_organic)
   elif waste_type == "Paper":
-    motor.move(duty_cycle_paper)
+    motor.forward(duty_cycle_paper)
   elif waste_type == "Plastic":
-    motor.move(duty_cycle_plastic)
+    motor.forward(duty_cycle_plastic)
   else:  # Aluminium or unknown category (adjust as needed)
+    motor.forward(1)
     motor.stop()
 
   # Open servo flap to drop waste
-  servo.angle = 90
-  delay(1)  # Adjust delay for servo movement
+  servo.value = 1 # Adjusts to 90 degrees
+  time.sleep(1)  # Adjust delay for servo movement
 
   # Reset motor and servo positions
   motor.stop()
-  servo.angle = 0
+  servo.value = -1 # Adjusts back to 0 degrees
 
   # Display the frame
   cv2.imshow('Waste Sorting System', frame)
